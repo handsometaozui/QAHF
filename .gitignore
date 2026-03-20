@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 数据集（体积过大）
+data/
+
+# 虚拟环境
+venv/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.bak
