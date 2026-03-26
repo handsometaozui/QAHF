@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "LunWen",
+  "project_id": "dbb5335f-a7e6-4bf9-9a9a-604ee29dd20f"
+}
