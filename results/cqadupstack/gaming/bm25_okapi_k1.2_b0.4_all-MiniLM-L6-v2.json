@@ -1,0 +1,54 @@
+{
+  "dataset": "cqadupstack/gaming",
+  "test_queries": 250,
+  "train_queries": 250,
+  "bm25_config": {
+    "k1": 1.2,
+    "b": 0.4,
+    "variant": "okapi"
+  },
+  "dense_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "retrieval_depth": 500,
+  "use_retrieval_features": true,
+  "results": {
+    "bm25": {
+      "mrr@10": 0.39970445243055225,
+      "ndcg@10": 0.4163792547436212,
+      "recall@100": 0.7386500000000001
+    },
+    "dense": {
+      "mrr@10": 0.47223203932851143,
+      "ndcg@10": 0.49381095434283756,
+      "recall@100": 0.8874166666666666
+    },
+    "hybrid_rrf": {
+      "mrr@10": 0.48278618721535155,
+      "ndcg@10": 0.49907198997067725,
+      "recall@100": 0.8801499999999999
+    },
+    "qahf": {
+      "mrr@10": 0.5012567876063183,
+      "ndcg@10": 0.5099252617120578,
+      "recall@100": 0.9004166666666666
+    },
+    "oracle": {
+      "mrr@10": 0.5998860944990999,
+      "ndcg@10": 0.60359353561132,
+      "recall@100": 0.92275
+    }
+  },
+  "temperature": 1.0,
+  "alpha_center": 0.19172552227973938,
+  "alpha_stats": {
+    "mean": 0.19413846197724344,
+    "std": 0.052627458046290834,
+    "min": 0.06421265006065369,
+    "max": 0.31661540269851685
+  },
+  "oracle_alpha_stats": {
+    "mean": 0.1802,
+    "std": 0.2418635152312146,
+    "min": 0.05,
+    "max": 0.95
+  }
+}

@@ -1,0 +1,127 @@
+一、混合检索融合策略（核心相关）
+[1] An Analysis of Fusion Functions for Hybrid Retrieval
+  - 作者：Bruch, Ji, Ingber                                                                                                                                                         
+  - 发表：ACM TOIS, 2023 | arXiv: 2210.11934                                                                                                                                        
+  - 关联：直接对比 RRF vs 线性融合（CC）在 BM25+dense 上的效果，是 QAHF 融合策略设计的基础文献
+https://arxiv.org/abs/2210.11934
+
+[2] Reciprocal Rank Fusion outperforms Condorcet and Individual Rank Learning Methods    
+  - 作者：Cormack, Clarke, Büttcher                                                                                                                                                 
+  - 发表：SIGIR 2009 | ACM DL: doi:10.1145/1571941.1572114                                                                                                                          
+  - 关联：RRF 原论文，你的基线方法之一
+https://dl.acm.org/doi/10.1145/1571941.1572114
+
+[3] To Interpolate or not to Interpolate: PRF, Dense and Sparse Retrievers                                                                                                        
+  - 作者：Hang Li et al.                                                                                                                                                            
+  - 发表：SIGIR 2022 | arXiv: 2205.00235                                                                                                                                            
+  - 关联：研究 BM25 与 dense 检索的静态线性组合权重，为 QAHF 的固定权重基线提供依据
+https://arxiv.org/abs/2205.00235
+
+二、自适应/查询感知检索（最核心相关）
+[4] DAT: Dynamic Alpha Tuning for Hybrid Retrieval in Retrieval-Augmented Generation                                                                                              
+  - 作者：Hsu, Tzeng                                                                                                                                                                  - 发表：arXiv 2025 | arXiv: 2503.23013                                                                                                                                               
+ -关联：与 QAHF 最相似的近期工作，动态调整lBM25+dense 的 alpha 权重；QAHF 的差异在于用预检索特征而非 LLM 评分，推理代价更低
+https://arxiv.org/abs/2503.23013
+
+[5] Predicting Efficiency/Effectiveness Trade-offs for Dense vs. Sparse Retrieval Strategy Selection
+  - 作者：Arabzadeh, Yan, Clarke                                                           
+  - 发表：CIKM 2021 | arXiv: 2109.10739                                                                                                                                             
+  - 关联：在查询级别分类选择稀疏/密集/混合检索，是 QAHF 自适应权重预测思想的直接前驱
+https://arxiv.org/abs/2109.10739
+
+三、预检索查询特征 / 查询难度预测
+[6] Query Performance Prediction for Neural IR: Are We There Yet?                                                                                                                 
+  - 作者：Faggioli et al.                                  
+  - 发表：ECIR 2023 | arXiv: 2302.09947                                                                                                                                                
+  -关联：分析经典预检索 QPPe特征在神经tIRn上的效果，直接说明了 QAHF 需要设计更好的预检索特征的动机 
+https://arxiv.org/abs/2302.09947
+
+[7] Noisy Perturbations for Estimating Query Difficulty in Dense Retrievers
+  - 作者：Arabzadeh et al.                                                                 
+  - 发表：CIKM 2023 | ACM DL: doi:10.1145/3583780.3615270                                                                                                                           
+  - 关联：针对 dense 检索的无监督查询难度估计方法，与 QAHF 的查询特征设计方向相关 
+https://dl.acm.org/doi/10.1145/3583780.3615270
+
+四、Dense 检索基础方法
+[8] Dense Passage Retrieval for Open-Domain Question Answering (DPR)                                                                                                              
+  - 作者：Karpukhin et al.                                 
+  - 发表：EMNLP 2020 | arXiv: 2004.04906                                                                                                                                              
+  -关联：dense 检索的基础框架
+https://arxiv.org/pdf/2004.04906             
+                                                                                                                                                                                      [9] Approximate Nearest Neighbor Negative Contrastive Learning for Dense Text Retrieval (ANCE)                                                                                    
+  - 作者：Xiong et al.                                                                     
+  - 发表：ICLR 2021 | arXiv: 2007.00808                                                                                                                                             
+  - 关联：更强的 dense 检索基线           
+https://arxiv.org/pdf/2007.00808                                                                                                                                          
+                                                                                           
+  [10] ColBERTv2: Effective and Efficient Retrieval via Lightweight Late Interaction                                                                                                
+  - 作者：Santhanam et al.                    
+  - 发表：NAACL 2022 | arXiv: 2112.01488                                                                                                                                            
+  - 关联：代表性后期交互 dense 检索方法                    
+https://arxiv.org/pdf/2112.01488                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                               
+  五、基准与综述                                                                                                                                                                                                                                     
+  [11] BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of IR Models                                                                                                        
+  - 作者：Thakur et al.                                    
+  - 发表：NeurIPS 2021 | arXiv: 2104.08663                                                                                                                                            
+  - 关联：你的实验使用的基准数据集   
+https://arxiv.org/pdf/2104.08663      
+                                                                                                                                                                                      [12] A Study on the Efficiency and Generalization of Light Hybrid Retrievers                                                                                                      
+  - 作者：Luo et al.                                                                       
+  - 发表：ACL 2023 (short) | arXiv: 2210.01371                                                                                                                                      
+  - 关联：在 BEIR 上研究混合检索的泛化性，直接支持 QAHF 的实验设计动机
+https://arxiv.org/pdf/2210.01371                                                                                                              
+                                                                                                                                                                                      [13] SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking                                                                                                           
+  - 作者：Formal, Piwowarski, Clinchant                                                                                                                                             
+  - 发表：SIGIR 2021 | arXiv: 2107.05720                                                   
+  - 关联：learned sparse retrieval 代表方法，与 BM25 形成对比
+https://arxiv.org/pdf/2107.05720                                                                                                                       
+                                                                                                                                                                                      [14] From Distillation to Hard Negative Sampling: Making Sparse Neural IR Models More Effective (SPLADE++)                                                                        
+  - 作者：Formal et al.                                                                                                                                                             
+  - 发表：SIGIR 2022 | arXiv: 2205.04733                                                                                                                                            
+  - 关联：SPLADE 改进版，BEIR 上 sparse 检索的 SOTA
+https://arxiv.org/pdf/2205.04733                                        
+                                                                                                                                                                                    
+  [15] Dense Text Retrieval based on Pretrained Language Models: A Survey
+  - 作者：Zhao et al.                                                                                                                                                               
+  - 发表：ACM TOIS / arXiv 2022 | arXiv: 2211.14876                                                                                                                                 
+  - 关联：dense 检索全面综述，支撑论文相关工作章节
+https://arxiv.org/pdf/2211.14876
+
+[16] Text Embeddings by Weakly-Supervised Contrastive Pre-training (E5)
+  - 作者：Wang et al.（Microsoft）                                       
+  - 发表：arXiv 2022 | arXiv: 2212.03533  
+  - 关联：你实验中使用的 all-MiniLM 同类的 dense 检索模型，E5 是 BEIR 上首个无标注数据超过 BM25 的 dense 模型，支撑 QAHF 对 dense 检索分量的选择理由
+https://arxiv.org/pdf/2212.03533                                
+                                                                                                                                                                                    
+  [17] BGE M3-Embedding: Multi-Lingual, Multi-Functionality, Multi-Granularity Text Embeddings                                                                                      
+  - 作者：Chen, Xiao, Zhang et al.（BAAI）                                                                                                                                          
+  - 发表：arXiv 2024 | arXiv: 2402.03216                                                                                                                                            
+  - 关联：将 dense、sparse、multi-vector 三种检索统一在一个模型中，直接说明混合检索自适应加权的重要性  
+https://arxiv.org/pdf/2402.03216                                                                             
+                                                                                                                                                                                      [18] Injecting the BM25 Score as Text Improves BERT-Based Re-rankers                                                                                                              
+  - 作者：Askari et al.                                                                                                                                                             
+  - 发表：ECIR 2023 | arXiv: 2301.09728                                                                                                                                             
+  - 关联：证明 BM25 分数包含 dense 模型无法替代的词汇相关性信号，支撑 QAHF 保留 BM25 分量的设计动机
+https://arxiv.org/pdf/2301.09728                                                                                 
+                                                                                                                                                                                      [19] RankT5: Fine-Tuning T5 for Text Ranking with Ranking Losses                                                                                                                  
+  - 作者：Zhuang et al.（Google）                                                                                                                                                   
+  - 发表：SIGIR 2023 | arXiv: 2210.10634                                                                                                                                            
+  - 关联：跨领域泛化的排序损失学习方法，与 QAHF 自适应权重的跨数据集泛化目标相关
+https://arxiv.org/pdf/2210.10634                                                                                                    
+                                                                                                                                                                                      [20] ListT5: Listwise Reranking with Fusion-in-Decoder Improves Zero-shot Retrieval                                                                                               
+  - 作者：Yoon et al.                                                                                                                                                               
+  - 发表：ACL 2024 | arXiv: 2402.15838                                                                                                                                              
+  - 关联：展示混合检索作为第一阶段再配合重排序的多阶段流程，QAHF 的输出可作为此类流程的上游组件
+https://arxiv.org/pdf/2402.15838                                                                                     
+                                                                                                                                                                                    
+  [21] Precise Zero-Shot Dense Retrieval without Relevance Labels (HyDE)                                                                                                            
+  - 作者：Gao, Ma, Lin, Callan                                                                                                                                                      
+  - 发表：ACL 2023 | arXiv: 2212.10496                                                                                                                                              
+  - 关联：通过生成假设文档弥补 query-document 语义鸿沟，说明 dense 检索在 zero-shot 场景的局限，佐证 QAHF 自适应混合的必要性
+https://arxiv.org/pdf/2212.10496                                                        
+                                                                                                                                                                                      [22] BRIGHT: A Realistic and Challenging Benchmark for Reasoning-Intensive Retrieval                                                                                              
+  - 作者：Su, Yen, Xia et al.                                                                                                                                                       
+  - 发表：ICLR 2025 | arXiv: 2407.12883                                                                                                                                             
+  - 关联：证明不同查询类型（关键词/语义/推理密集型）对检索模型的需求差异巨大，强力支撑 QAHF "不同查询需要不同权重" 的核心论点
+https://arxiv.org/pdf/2407.12883

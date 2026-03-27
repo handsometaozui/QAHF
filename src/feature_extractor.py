@@ -22,6 +22,8 @@ class QueryFeatureExtractor:
     """
     
     def __init__(self):
+        self._bm25_retriever = None  # 可选注入，用于 IDF 特征
+
         # 常见停用词
         self.stopwords = set([
             'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -42,13 +44,29 @@ class QueryFeatureExtractor:
             'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs',
         ])
         
-        # 特征名称（用于解释性）
+        # 查询特征名称
         self.feature_names = [
             'query_length', 'num_tokens', 'avg_token_length',
             'has_quotes', 'has_special_chars', 'num_entities',
             'stopword_ratio', 'unique_token_ratio', 'entity_density',
-            'keyword_score', 'semantic_score', 'hybrid_score'
+            'keyword_score', 'semantic_score', 'hybrid_score',
+            'avg_idf', 'max_idf'  # IDF 特征：BM25 注入后生效
         ]
+
+        # 检索感知特征名称（从 BM25/Dense 结果的分数分布中提取）
+        self.retrieval_feature_names = [
+            'bm25_top10_mean', 'bm25_top10_std',
+            'dense_top10_mean', 'dense_top10_std',
+            'bm25_score_gap',       # top1 - top10 分数差（衡量 BM25 置信度）
+            'dense_score_gap',      # top1 - top10 分数差（衡量 Dense 置信度）
+            'top10_jaccard',        # BM25/Dense top-10 Jaccard 相似度
+            'top50_jaccard',        # BM25/Dense top-50 Jaccard 相似度
+            'score_dominance',      # BM25 相对 Dense 的置信度优势
+        ]
+
+    def set_bm25(self, bm25_retriever):
+        """注入 BM25 检索器以启用 IDF 特征"""
+        self._bm25_retriever = bm25_retriever
     
     def extract_features(self, query: str) -> np.ndarray:
         """
@@ -84,8 +102,9 @@ class QueryFeatureExtractor:
         has_special_chars = 1.0 if any(c in special_chars for c in query) else 0.0
         features.append(has_special_chars)
         
-        # 6. 命名实体数量（简化版：大写开头的词）
-        num_entities = len([t for t in tokens if t[0].isupper() and t.isalpha()])
+        # 6. 命名实体数量（简化版：原始 query 中大写开头的词，不能用 lower() 后的 tokens）
+        raw_tokens = re.findall(r'\b\w+\b', query)
+        num_entities = len([t for t in raw_tokens if t[0].isupper() and t.isalpha()])
         features.append(num_entities)
         
         # 7. 停用词比例
@@ -112,9 +131,70 @@ class QueryFeatureExtractor:
         # 12. 混合倾向得分
         hybrid_score = self._compute_hybrid_score(keyword_score, semantic_score)
         features.append(hybrid_score)
-        
+
+        # 13 & 14. IDF 特征（需要 BM25 注入）
+        if self._bm25_retriever is not None:
+            avg_idf, max_idf = self._bm25_retriever.get_idf_stats(query)
+        else:
+            avg_idf, max_idf = 0.0, 0.0
+        features.append(avg_idf)
+        features.append(max_idf)
+
         return np.array(features)
     
+    def extract_retrieval_features(self,
+                                    bm25_results: List[Tuple[str, float]],
+                                    dense_results: List[Tuple[str, float]]) -> np.ndarray:
+        """
+        从 BM25 和 Dense 检索结果中提取分数分布特征（9维）。
+        这些特征反映每个检索器对当前查询的置信度和两者的一致性，
+        为权重预测提供关键信号。
+
+        Args:
+            bm25_results: [(doc_id, score), ...] 按分数降序
+            dense_results: [(doc_id, score), ...] 按分数降序
+
+        Returns:
+            9维特征向量
+        """
+        # BM25 top-10 分数统计
+        bm25_scores_10 = [s for _, s in bm25_results[:10]] if len(bm25_results) >= 10 else [s for _, s in bm25_results]
+        bm25_mean_10 = float(np.mean(bm25_scores_10)) if bm25_scores_10 else 0.0
+        bm25_std_10 = float(np.std(bm25_scores_10)) if bm25_scores_10 else 0.0
+
+        # Dense top-10 分数统计
+        dense_scores_10 = [s for _, s in dense_results[:10]] if len(dense_results) >= 10 else [s for _, s in dense_results]
+        dense_mean_10 = float(np.mean(dense_scores_10)) if dense_scores_10 else 0.0
+        dense_std_10 = float(np.std(dense_scores_10)) if dense_scores_10 else 0.0
+
+        # 分数差距（top1 - top10）：衡量检索器置信度
+        bm25_score_gap = (bm25_results[0][1] - bm25_results[min(9, len(bm25_results)-1)][1]) if bm25_results else 0.0
+        dense_score_gap = (dense_results[0][1] - dense_results[min(9, len(dense_results)-1)][1]) if dense_results else 0.0
+
+        # 跨检索器一致性：Jaccard 相似度
+        bm25_top10_ids = set(did for did, _ in bm25_results[:10])
+        dense_top10_ids = set(did for did, _ in dense_results[:10])
+        bm25_top50_ids = set(did for did, _ in bm25_results[:50])
+        dense_top50_ids = set(did for did, _ in dense_results[:50])
+
+        union_10 = bm25_top10_ids | dense_top10_ids
+        top10_jaccard = len(bm25_top10_ids & dense_top10_ids) / len(union_10) if union_10 else 0.0
+
+        union_50 = bm25_top50_ids | dense_top50_ids
+        top50_jaccard = len(bm25_top50_ids & dense_top50_ids) / len(union_50) if union_50 else 0.0
+
+        # 置信度优势：BM25 分数差距相对于 Dense 的比值
+        # > 1 表示 BM25 更有区分度，< 1 表示 Dense 更有区分度
+        score_dominance = bm25_score_gap / (dense_score_gap + 1e-8)
+
+        return np.array([
+            bm25_mean_10, bm25_std_10,
+            dense_mean_10, dense_std_10,
+            bm25_score_gap, dense_score_gap,
+            top10_jaccard, top50_jaccard,
+            score_dominance
+        ])
+
     def _tokenize(self, query: str) -> List[str]:
         """简单分词"""
         # 移除标点，转小写，分词

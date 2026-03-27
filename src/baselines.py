@@ -82,6 +82,16 @@ class BM25Retriever:
         
         return results
     
+    def get_idf_stats(self, query: str):
+        """返回查询词的平均 IDF 和最大 IDF（用于特征提取）"""
+        if self.bm25 is None:
+            return 0.0, 0.0
+        tokens = self._tokenize(query)
+        if not tokens:
+            return 0.0, 0.0
+        idf_values = [self.bm25.idf.get(t, 0.0) for t in tokens]
+        return float(np.mean(idf_values)), float(max(idf_values))
+
     def save(self, path: Path):
         """保存索引"""
         path.mkdir(parents=True, exist_ok=True)
