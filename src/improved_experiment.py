@@ -14,6 +14,7 @@ import random
 from pathlib import Path
 from typing import Dict, List, Tuple
 import numpy as np
+import torch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -211,6 +212,13 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
                             bm25_variant: str = "okapi",
                             dense_model: str = "sentence-transformers/all-MiniLM-L6-v2"):
     """运行改进的 QAHF 实验（检索感知版本）"""
+    # 固定所有随机种子，确保结果可复现
+    random.seed(42)
+    np.random.seed(42)
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+
     print("\n" + "=" * 80)
     print(f"QAHF Retrieval-Aware Experiment - {dataset.upper()}")
     print("=" * 80)
@@ -262,6 +270,7 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
     print("Training QAHF model (retrieval-aware)...")
     print("=" * 60)
 
+    torch.manual_seed(42)  # dense encoding 会消耗 torch 随机状态，此处重置确保训练可复现
     qahf = QAHF(use_retrieval_features=True)
     qahf.feature_extractor.set_bm25(bm25)
 
