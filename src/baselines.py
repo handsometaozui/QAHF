@@ -283,11 +283,11 @@ class RRFHybridRetriever:
             [(doc_id, score), ...]
         """
         # BM25 检索
-        bm25_results = self.bm25.search(query, top_k=top_k * 2)
+        bm25_results = self.bm25.search(query, top_k=500)
         bm25_ranks = {doc_id: rank + 1 for rank, (doc_id, _) in enumerate(bm25_results)}
-        
+
         # 向量检索
-        dense_results = self.dense.search(query, top_k=top_k * 2)
+        dense_results = self.dense.search(query, top_k=500)
         dense_ranks = {doc_id: rank + 1 for rank, (doc_id, _) in enumerate(dense_results)}
         
         # RRF 融合

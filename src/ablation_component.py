@@ -151,16 +151,16 @@ def run_ablation_on_dataset(
 
     retrieval_depth, rrf_k = 500, 60
 
-    # ── 生成训练集特征与伪标签（23 维） ────────────────────────────────────
+    # ── 生成训练集特征与伪标签（14 维） ────────────────────────────────────
     print("\nGenerating pseudo-labels and features for train set...")
-    train_features_23, train_alphas = generate_pseudo_labels_with_features(
+    train_features_14, train_alphas = generate_pseudo_labels_with_features(
         train_queries, qrels, bm25, dense, feature_extractor,
         retrieval_depth=retrieval_depth, rrf_k=rrf_k,
     )
 
     n_total = len(train_alphas)
     n_train = int(n_total * 0.8)
-    tr_f,  vl_f  = train_features_23[:n_train], train_features_23[n_train:]
+    tr_f,  vl_f  = train_features_14[:n_train], train_features_14[n_train:]
     tr_l,  vl_l  = train_alphas[:n_train],       train_alphas[n_train:]
 
     # ── 预缓存测试集检索结果（所有配置共用，节省时间） ─────────────────────
@@ -168,7 +168,7 @@ def run_ablation_on_dataset(
     test_qids   = list(test_queries.keys())
     bm25_cache  = {}
     dense_cache = {}
-    test_feat_23 = []
+    test_feat_14 = []
 
     for qid in test_qids:
         query = test_queries[qid]
@@ -178,10 +178,9 @@ def run_ablation_on_dataset(
         dense_cache[qid] = dense_res
 
         qf = feature_extractor.extract_features(query)
-        rf = feature_extractor.extract_retrieval_features(bm25_res, dense_res)
-        test_feat_23.append(np.concatenate([qf, rf]))
+        test_feat_14.append(qf)
 
-    test_feat_23 = np.array(test_feat_23)   # (N_test, 23)
+    test_feat_14 = np.array(test_feat_14)   # (N_test, 14)
 
     # ── 特征标准化参数（从训练子集计算） ──────────────────────────────────
     feat_mean = tr_f.mean(axis=0)
@@ -190,8 +189,7 @@ def run_ablation_on_dataset(
 
     tr_f_norm = (tr_f - feat_mean) / feat_std
     vl_f_norm = (vl_f - feat_mean) / feat_std
-    test_f_norm_23 = (test_feat_23 - feat_mean) / feat_std
-    test_f_norm_14 = test_f_norm_23[:, :14]
+    test_f_norm_14 = (test_feat_14 - feat_mean) / feat_std
 
     evaluator   = RetrievalEvaluator(test_qrels)
     metrics_lst = ["mrr@10", "ndcg@10", "recall@100"]
@@ -210,13 +208,13 @@ def run_ablation_on_dataset(
     # ════════════════════════════════════════════════════════════════════════
     # 配置 1：RRF（α=0.5）
     # ════════════════════════════════════════════════════════════════════════
-    print("\n[1/7] RRF (α=0.5)...")
+    print("\n[1/6] RRF (α=0.5)...")
     results["rrf"] = _fuse_and_eval(np.full(len(test_qids), 0.5))
 
     # ════════════════════════════════════════════════════════════════════════
     # 配置 2：Best Fixed α（训练集网格搜索）
     # ════════════════════════════════════════════════════════════════════════
-    print("[2/7] Best Fixed α (grid search on train set)...")
+    print("[2/6] Best Fixed α (grid search on train set)...")
     best_alpha = find_best_fixed_alpha(
         train_queries, qrels, bm25, dense, retrieval_depth, rrf_k
     )
@@ -225,74 +223,45 @@ def run_ablation_on_dataset(
     results["best_fixed"]["best_alpha"] = best_alpha
 
     # ════════════════════════════════════════════════════════════════════════
-    # 配置 3：Linear Regression（23 维）
+    # 配置 3：Linear Regression（14 维）
     # ════════════════════════════════════════════════════════════════════════
-    print("[3/7] Linear Regression (23-dim)...")
-    lr_model = LinearRegression()
-    lr_model.fit(tr_f_norm, tr_l)
-    results["linear_23"] = _fuse_and_eval(lr_model.predict(test_f_norm_23))
+    print("[3/6] Linear Regression (14-dim)...")
+    lr_model_14 = LinearRegression()
+    lr_model_14.fit(tr_f_norm, tr_l)
+    results["linear_14"] = _fuse_and_eval(lr_model_14.predict(test_f_norm_14))
 
     # ════════════════════════════════════════════════════════════════════════
-    # 配置 4：Ridge Regression（23 维）
+    # 配置 4：Ridge Regression（14 维）
     # ════════════════════════════════════════════════════════════════════════
-    print("[4/7] Ridge Regression (23-dim)...")
-    ridge_model = Ridge(alpha=1.0)
-    ridge_model.fit(tr_f_norm, tr_l)
-    results["ridge_23"] = _fuse_and_eval(ridge_model.predict(test_f_norm_23))
+    print("[4/6] Ridge Regression (14-dim)...")
+    ridge_model_14 = Ridge(alpha=1.0)
+    ridge_model_14.fit(tr_f_norm, tr_l)
+    results["ridge_14"] = _fuse_and_eval(ridge_model_14.predict(test_f_norm_14))
 
     # ════════════════════════════════════════════════════════════════════════
-    # 配置 5：MLP w/o Retrieval Features（14 维查询特征）
+    # 配置 5：QAHF（14 维 MLP，当前主模型）
     # ════════════════════════════════════════════════════════════════════════
-    print("[5/7] MLP w/o Retrieval Features (14-dim)...")
+    print("[5/6] QAHF (14-dim MLP)...")
     torch.manual_seed(42)
     qahf_14 = QAHF(use_retrieval_features=False)
     qahf_14.feature_extractor.set_bm25(bm25)
     qahf_14.train(
-        train_features=tr_f[:, :14],
-        train_labels=tr_l,
-        val_features=vl_f[:, :14],
-        val_labels=vl_l,
-        epochs=150, batch_size=16, learning_rate=0.001,
-    )
-    qahf_14.calibrate(val_features=vl_f[:, :14], val_labels=vl_l)
-    # 推理时直接用预缓存的 14 维特征（已标准化）
-    with torch.no_grad():
-        feat_14_norm = (tr_f[:, :14].mean(axis=0), tr_f[:, :14].std(axis=0))
-    alphas_14 = np.array(
-        [qahf_14.predict_alpha(test_queries[qid]) for qid in test_qids]
-    )
-    results["mlp_14"] = _fuse_and_eval(alphas_14)
-
-    # ════════════════════════════════════════════════════════════════════════
-    # 配置 6：QAHF Full（23 维 MLP，与主实验完全一致）
-    # ════════════════════════════════════════════════════════════════════════
-    print("[6/7] QAHF Full (23-dim MLP)...")
-    torch.manual_seed(42)
-    qahf_full = QAHF(use_retrieval_features=True)
-    qahf_full.feature_extractor.set_bm25(bm25)
-    qahf_full.train(
         train_features=tr_f,
         train_labels=tr_l,
         val_features=vl_f,
         val_labels=vl_l,
         epochs=150, batch_size=16, learning_rate=0.001,
     )
-    qahf_full.calibrate(val_features=vl_f, val_labels=vl_l)
-
-    alphas_full = np.array(
-        [
-            qahf_full.predict_alpha(
-                test_queries[qid], bm25_cache[qid], dense_cache[qid]
-            )
-            for qid in test_qids
-        ]
+    qahf_14.calibrate(val_features=vl_f, val_labels=vl_l)
+    alphas_14 = np.array(
+        [qahf_14.predict_alpha(test_queries[qid]) for qid in test_qids]
     )
-    results["qahf_full"] = _fuse_and_eval(alphas_full)
+    results["mlp_14"] = _fuse_and_eval(alphas_14)
 
     # ════════════════════════════════════════════════════════════════════════
-    # 配置 7：Oracle（每查询独立最优 α，理论上界）
+    # 配置 6：Oracle（每查询独立最优 α，理论上界）
     # ════════════════════════════════════════════════════════════════════════
-    print("[7/7] Oracle...")
+    print("[6/6] Oracle...")
     alpha_grid = np.linspace(0.05, 0.95, 19)
     oracle_fused = {}
     for qid in test_qids:
@@ -338,10 +307,9 @@ def run_ablation_on_dataset(
     config_order = [
         ("rrf",          "RRF (α=0.5)"),
         ("best_fixed",   "Best Fixed α"),
-        ("linear_23",    "Linear Reg. (23-dim)"),
-        ("ridge_23",     "Ridge Reg. (23-dim)"),
-        ("mlp_14",       "MLP w/o Retrieval (14-dim)"),
-        ("qahf_full",    "QAHF Full (23-dim)"),
+        ("linear_14",    "Linear Reg. (14-dim)"),
+        ("ridge_14",     "Ridge Reg. (14-dim)"),
+        ("mlp_14",       "QAHF (14-dim MLP)"),
         ("oracle",       "Oracle"),
     ]
 
@@ -366,19 +334,11 @@ def run_ablation_on_dataset(
 # ---------------------------------------------------------------------------
 
 DATASET_CONFIGS = {
-    "scidocs": {
-        "bm25_k1": 1.5, "bm25_b": 0.75,
-        "bm25_variant": "okapi", "limit_queries": 500,
-    },
-    "nfcorpus": {
-        "bm25_k1": 1.5, "bm25_b": 0.75,
-        "bm25_variant": "okapi", "limit_queries": 500,
-    },
-    "cqadupstack/english": {
+    "cqadupstack/android": {
         "bm25_k1": 1.2, "bm25_b": 0.4,
         "bm25_variant": "okapi", "limit_queries": 500,
     },
-    "cqadupstack/gaming": {
+    "cqadupstack/english": {
         "bm25_k1": 1.2, "bm25_b": 0.4,
         "bm25_variant": "okapi", "limit_queries": 500,
     },
@@ -424,10 +384,9 @@ if __name__ == "__main__":
     config_order = [
         ("rrf",          "RRF (α=0.5)"),
         ("best_fixed",   "Best Fixed α"),
-        ("linear_23",    "Linear Reg. (23-dim)"),
-        ("ridge_23",     "Ridge Reg. (23-dim)"),
-        ("mlp_14",       "MLP w/o Retrieval (14-dim)"),
-        ("qahf_full",    "QAHF Full (23-dim)"),
+        ("linear_14",    "Linear Reg. (14-dim)"),
+        ("ridge_14",     "Ridge Reg. (14-dim)"),
+        ("mlp_14",       "QAHF (14-dim MLP)"),
         ("oracle",       "Oracle"),
     ]
 

@@ -154,10 +154,9 @@ def generate_pseudo_labels_with_features(queries: Dict[str, str],
         bm25_results = bm25.search(query_text, top_k=retrieval_depth)
         dense_results = dense.search(query_text, top_k=retrieval_depth)
 
-        # 提取特征（查询 14维 + 检索感知 9维 = 23维）
+        # 提取特征（仅查询侧 14维，预检索）
         query_features = feature_extractor.extract_features(query_text)
-        retrieval_features = feature_extractor.extract_retrieval_features(bm25_results, dense_results)
-        combined_features = np.concatenate([query_features, retrieval_features])
+        combined_features = query_features
 
         # 网格搜索最优 α（加权 RRF）
         best_alpha = 0.5
@@ -210,8 +209,14 @@ def generate_pseudo_labels_with_features(queries: Dict[str, str],
 def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
                             bm25_k1: float = 1.5, bm25_b: float = 0.75,
                             bm25_variant: str = "okapi",
-                            dense_model: str = "sentence-transformers/all-MiniLM-L6-v2"):
-    """运行改进的 QAHF 实验（检索感知版本）"""
+                            dense_model: str = "sentence-transformers/all-MiniLM-L6-v2",
+                            test_size: int = None):
+    """运行改进的 QAHF 实验（预检索版本）
+
+    Args:
+        test_size: 固定测试集查询数量。为 None 时默认 5:5 划分；
+                   指定时取最后 test_size 条作为测试集，其余全部作为训练集。
+    """
     # 固定所有随机种子，确保结果可复现
     random.seed(42)
     np.random.seed(42)
@@ -230,15 +235,24 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
     # 1. 加载数据
     corpus, queries, qrels = load_beir_data(data_dir, limit_queries=limit_queries)
 
-    # 2. 划分
-    query_ids = list(queries.keys())
+    # 2. 划分（只对有 qrels 标注的查询进行划分）
+    query_ids = [qid for qid in queries.keys() if qid in qrels]
     random.seed(42)
     random.shuffle(query_ids)
 
-    split = int(len(query_ids) * 0.5)
-    train_queries = {qid: queries[qid] for qid in query_ids[:split] if qid in qrels}
-    test_queries = {qid: queries[qid] for qid in query_ids[split:] if qid in qrels}
-    test_qrels = {qid: qrels[qid] for qid in test_queries}
+    if test_size is not None:
+        # 固定测试集大小：最后 test_size 条作为测试集，其余全部作为训练集
+        test_ids  = query_ids[-test_size:]
+        train_ids = query_ids[:-test_size]
+    else:
+        # 默认 5:5 划分
+        split = int(len(query_ids) * 0.5)
+        train_ids = query_ids[:split]
+        test_ids  = query_ids[split:]
+
+    train_queries = {qid: queries[qid] for qid in train_ids if qid in qrels}
+    test_queries  = {qid: queries[qid] for qid in test_ids  if qid in qrels}
+    test_qrels    = {qid: qrels[qid]   for qid in test_queries}
 
     print(f"  Train queries: {len(train_queries)}")
     print(f"  Test queries: {len(test_queries)}")
@@ -271,7 +285,7 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
     print("=" * 60)
 
     torch.manual_seed(42)  # dense encoding 会消耗 torch 随机状态，此处重置确保训练可复现
-    qahf = QAHF(use_retrieval_features=True)
+    qahf = QAHF(use_retrieval_features=False)
     qahf.feature_extractor.set_bm25(bm25)
 
     n = len(train_alphas)
@@ -328,16 +342,16 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
         rrf_all_results[qid] = hybrid_rrf.search(query, top_k=100)
     results["hybrid_rrf"] = evaluator.evaluate(rrf_all_results, ["mrr@10", "ndcg@10", "recall@100"])
 
-    # QAHF（检索感知加权 RRF）
-    print("[4/5] Running QAHF (retrieval-aware)...")
+    # QAHF（预检索查询感知加权 RRF）
+    print("[4/5] Running QAHF (pre-retrieval, query-only)...")
     qahf_results = {}
     alpha_values = []
     for qid, query in test_queries.items():
+        alpha = qahf.predict_alpha(query)  # 预检索：仅依赖查询文本
+        alpha_values.append(alpha)
+
         bm25_res = bm25.search(query, top_k=retrieval_depth)
         dense_res = dense.search(query, top_k=retrieval_depth)
-
-        alpha = qahf.predict_alpha(query, bm25_res, dense_res)
-        alpha_values.append(alpha)
 
         sorted_results = weighted_rrf_fuse(bm25_res, dense_res, alpha, rrf_k)
         qahf_results[qid] = sorted_results[:100]
@@ -442,7 +456,7 @@ def run_improved_experiment(dataset: str = "fiqa", limit_queries: int = 200,
         "bm25_config": {"k1": bm25_k1, "b": bm25_b, "variant": bm25_variant},
         "dense_model": dense_model,
         "retrieval_depth": retrieval_depth,
-        "use_retrieval_features": True,
+        "use_retrieval_features": False,
         "results": results,
         "temperature": qahf.temperature,
         "alpha_center": qahf.alpha_center,
@@ -480,9 +494,12 @@ if __name__ == "__main__":
     parser.add_argument("--bm25_variant", default="okapi", type=str, choices=["okapi", "plus"])
     parser.add_argument("--dense_model", default="sentence-transformers/all-MiniLM-L6-v2", type=str,
                         help="Dense retrieval model name")
+    parser.add_argument("--test_size", default=None, type=int,
+                        help="固定测试集大小（不指定则默认 5:5 划分）")
     args = parser.parse_args()
 
     run_improved_experiment(args.dataset, args.limit,
                             bm25_k1=args.bm25_k1, bm25_b=args.bm25_b,
                             bm25_variant=args.bm25_variant,
-                            dense_model=args.dense_model)
+                            dense_model=args.dense_model,
+                            test_size=args.test_size)
