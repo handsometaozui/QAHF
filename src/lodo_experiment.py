@@ -271,7 +271,7 @@ def run_lodo_experiment(
         rrf_n  = res["rrf"]["ndcg@10"]
         qahf_n = res["qahf_lodo"]["ndcg@10"]
         gain   = res["ndcg_gain"]
-        verdict = "✓ QAHF wins" if gain > 0 else "✗ RRF wins"
+        verdict = "[WIN]" if gain > 0 else "[LOSS]"
         if gain > 0:
             wins += 1
         else:

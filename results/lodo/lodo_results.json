@@ -1,0 +1,80 @@
+{
+  "fiqa": {
+    "rrf": {
+      "mrr@10": 0.427,
+      "ndcg@10": 0.3433,
+      "recall@100": 0.6837
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.4535,
+      "ndcg@10": 0.3523,
+      "recall@100": 0.6808
+    },
+    "ndcg_gain": 2.61
+  },
+  "scidocs": {
+    "rrf": {
+      "mrr@10": 0.3519,
+      "ndcg@10": 0.2111,
+      "recall@100": 0.4838
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.3777,
+      "ndcg@10": 0.2307,
+      "recall@100": 0.5104
+    },
+    "ndcg_gain": 9.29
+  },
+  "cqadupstack/android": {
+    "rrf": {
+      "mrr@10": 0.4819,
+      "ndcg@10": 0.4798,
+      "recall@100": 0.831
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.5246,
+      "ndcg@10": 0.5296,
+      "recall@100": 0.87
+    },
+    "ndcg_gain": 10.39
+  },
+  "cqadupstack/english": {
+    "rrf": {
+      "mrr@10": 0.4007,
+      "ndcg@10": 0.4065,
+      "recall@100": 0.7446
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.4532,
+      "ndcg@10": 0.4465,
+      "recall@100": 0.7704
+    },
+    "ndcg_gain": 9.82
+  },
+  "cqadupstack/gaming": {
+    "rrf": {
+      "mrr@10": 0.4824,
+      "ndcg@10": 0.4966,
+      "recall@100": 0.8811
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.4928,
+      "ndcg@10": 0.509,
+      "recall@100": 0.8964
+    },
+    "ndcg_gain": 2.49
+  },
+  "cqadupstack/physics": {
+    "rrf": {
+      "mrr@10": 0.4557,
+      "ndcg@10": 0.4255,
+      "recall@100": 0.8439
+    },
+    "qahf_lodo": {
+      "mrr@10": 0.4804,
+      "ndcg@10": 0.4603,
+      "recall@100": 0.8521
+    },
+    "ndcg_gain": 8.17
+  }
+}
