@@ -22,7 +22,7 @@ class WeightPredictor(nn.Module):
     输出: BM25 权重 α ∈ [0, 1]
     """
 
-    def __init__(self, input_dim: int = 23, hidden_dim: int = 64):
+    def __init__(self, input_dim: int = 14, hidden_dim: int = 64):
         super().__init__()
 
         self.network = nn.Sequential(
@@ -50,7 +50,7 @@ class QAHF:
     """
 
     def __init__(self,
-                 use_retrieval_features: bool = True,
+                 use_retrieval_features: bool = False,
                  model_path: Optional[Path] = None,
                  device: str = "cpu"):
         self.feature_extractor = QueryFeatureExtractor()

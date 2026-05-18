@@ -34,3 +34,14 @@ logs/
 .dolt/
 *.db
 .beads-credential-key
+
+# Claude Code memory & personal files
+.claude/
+
+# Word temp files
+~$*.docx
+~$*.xlsx
+
+# Output logs
+lodo_out.txt
+Fixed_advise2.md
