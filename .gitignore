@@ -38,6 +38,9 @@ logs/
 # Claude Code memory & personal files
 .claude/
 
+# Paper drafts
+paper/
+
 # Word temp files
 ~$*.docx
 ~$*.xlsx
