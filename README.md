@@ -33,42 +33,66 @@ Datasets are saved to `data/beir/` by default.
 Run QAHF against all baselines (BM25, Dense, RRF, Oracle) on all six datasets:
 
 ```bash
-python src/improved_experiment.py --dataset fiqa       --bm25_k1 1.2 --bm25_b 0.4
-python src/improved_experiment.py --dataset scidocs    --bm25_k1 1.5 --bm25_b 0.75
+python src/improved_experiment.py --dataset fiqa                --bm25_k1 1.2 --bm25_b 0.4
+python src/improved_experiment.py --dataset scidocs             --bm25_k1 1.5 --bm25_b 0.75
 python src/improved_experiment.py --dataset cqadupstack/android --bm25_k1 1.2 --bm25_b 0.4
 python src/improved_experiment.py --dataset cqadupstack/english --bm25_k1 1.2 --bm25_b 0.4
 python src/improved_experiment.py --dataset cqadupstack/gaming  --bm25_k1 1.2 --bm25_b 0.4
 python src/improved_experiment.py --dataset cqadupstack/physics --bm25_k1 1.2 --bm25_b 0.4
 ```
 
-Results are saved to `results/<dataset>/`.
+Results are saved to `results/<dataset>/`. Dense model: `sentence-transformers/all-MiniLM-L6-v2`. All experiments run on CPU.
 
-**Expected results (NDCG@10):**
+**Expected results:**
 
-| Dataset | BM25 | Dense | RRF | QAHF | Oracle |
-|---------|------|-------|-----|------|--------|
-| FIQA | 0.2347 | 0.3248 | 0.3433 | 0.3469 | 0.4304 |
-| SciDocs | 0.1613 | 0.2368 | 0.2111 | 0.2256 | 0.2729 |
-| CQA-Android | 0.3703 | 0.5303 | 0.4798 | 0.5306 | 0.5977 |
-| CQA-English | 0.2895 | 0.4402 | 0.4065 | 0.4477 | 0.5196 |
-| CQA-Gaming | 0.4164 | 0.4938 | 0.4966 | 0.5081 | 0.6051 |
-| CQA-Physics | 0.3387 | 0.4625 | 0.4255 | 0.4647 | 0.5278 |
+| Dataset | Method | MRR@10 | NDCG@10 | Recall@100 |
+|---------|--------|--------|---------|-----------|
+| FIQA | BM25 | 0.3157 | 0.2347 | 0.5427 |
+| | Dense | 0.4229 | 0.3248 | 0.6600 |
+| | RRF | 0.4270 | 0.3433 | 0.6837 |
+| | **QAHF** | **0.4425** | **0.3469** | 0.6798 |
+| | Oracle | 0.5428 | 0.4304 | 0.7268 |
+| SciDocs | BM25 | 0.2844 | 0.1613 | 0.3613 |
+| | Dense | 0.3931 | 0.2368 | 0.5120 |
+| | RRF | 0.3519 | 0.2111 | 0.4838 |
+| | **QAHF** | **0.3667** | **0.2256** | 0.5096 |
+| | Oracle | 0.4443 | 0.2729 | 0.5295 |
+| CQA-Android | BM25 | 0.3897 | 0.3703 | 0.6964 |
+| | Dense | 0.5211 | 0.5303 | 0.8707 |
+| | RRF | 0.4819 | 0.4798 | 0.8310 |
+| | **QAHF** | 0.5191 | **0.5306** | **0.8711** |
+| | Oracle | 0.6008 | 0.5977 | 0.8868 |
+| CQA-English | BM25 | 0.2895 | 0.2895 | 0.5470 |
+| | Dense | 0.4477 | 0.4402 | 0.7674 |
+| | RRF | 0.4007 | 0.4065 | 0.7446 |
+| | **QAHF** | **0.4522** | **0.4477** | **0.7690** |
+| | Oracle | 0.5308 | 0.5196 | 0.7898 |
+| CQA-Gaming | BM25 | 0.3997 | 0.4164 | 0.7387 |
+| | Dense | 0.4722 | 0.4938 | 0.8874 |
+| | RRF | 0.4824 | 0.4966 | 0.8811 |
+| | **QAHF** | **0.4977** | **0.5081** | **0.8964** |
+| | Oracle | 0.5999 | 0.6051 | 0.9227 |
+| CQA-Physics | BM25 | 0.3542 | 0.3387 | 0.6348 |
+| | Dense | 0.4783 | 0.4625 | 0.8553 |
+| | RRF | 0.4557 | 0.4255 | 0.8439 |
+| | **QAHF** | **0.4848** | **0.4647** | **0.8601** |
+| | Oracle | 0.5462 | 0.5278 | 0.8776 |
 
-Dense model: `sentence-transformers/all-MiniLM-L6-v2`. All experiments run on CPU.
+Bold values indicate best result among non-Oracle methods per metric per dataset.
 
 ---
 
 ### 2. Ablation Study (Table 4)
 
-Compare QAHF (MLP) against RRF, Best Fixed α, Linear Regression, and Ridge Regression on four datasets:
+Compare QAHF (MLP) against RRF, Best Fixed α, Linear Regression, and Ridge Regression:
 
 ```bash
 python src/ablation_component.py --datasets fiqa cqadupstack/android cqadupstack/english cqadupstack/physics
 ```
 
-Results are saved to `results/<dataset>/ablation_component.json`.
+Results are saved to `results/<dataset>/ablation_component.json`. Values in parentheses show NDCG@10 gain relative to RRF.
 
-**Expected results (NDCG@10, Δ relative to RRF):**
+**Expected results (NDCG@10):**
 
 | Configuration | FIQA | CQA-Android | CQA-English | CQA-Physics |
 |---------------|------|-------------|-------------|-------------|
@@ -76,8 +100,8 @@ Results are saved to `results/<dataset>/ablation_component.json`.
 | Best Fixed α | 0.3577 (+4.17%) | 0.5394 (+12.43%) | 0.4467 (+9.89%) | 0.4692 (+10.25%) |
 | Linear Regression (14-dim) | 0.3569 (+3.96%) | 0.5274 (+9.92%) | 0.4456 (+9.62%) | 0.4600 (+8.10%) |
 | Ridge Regression (14-dim) | 0.3571 (+4.00%) | 0.5275 (+9.94%) | 0.4455 (+9.58%) | 0.4604 (+8.20%) |
-| **QAHF (14-dim MLP)** | **0.3469 (+0.85%)** | **0.5306 (+10.59%)** | **0.4477 (+10.13%)** | **0.4647 (+9.20%)** |
-| Oracle | 0.4304 | 0.5977 | 0.5196 | 0.5278 |
+| **QAHF (14-dim MLP)** | 0.3463 (+0.85%) | **0.5306 (+10.59%)** | **0.4477 (+10.13%)** | **0.4647 (+9.20%)** |
+| Oracle | 0.4304 | 0.5977 | 0.5196 | 0.5273 |
 
 ---
 
@@ -101,7 +125,7 @@ Results are saved to `results/lodo/lodo_results.json`.
 | CQA-English | 0.4065 | 0.4465 | +9.82% |
 | CQA-Gaming | 0.4966 | 0.5090 | +2.49% |
 | CQA-Physics | 0.4255 | 0.4603 | +8.17% |
-| **Average** | 0.3605 | 0.3881 | **+7.13%** |
+| **Average** | **0.3605** | **0.3881** | **+7.13%** |
 
 ---
 
